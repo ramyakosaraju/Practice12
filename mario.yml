@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubern8sdemo
+  name: mariodb
   labels:
-    app: kubern8sdemo
+    app: mariodb
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: kubern8sdemo
+      app: mariodb
   template:
     metadata:
       labels:
-        app: kubern8sdemo
+        app: mariodb
     spec:
       containers:
-      - name: kubern8sdemo
-        image: mvdmeij/k8sdemo:v1
+      - name: mariodb
+        image: pengbai/docker-supermario
         ports:
         - containerPort: 80
