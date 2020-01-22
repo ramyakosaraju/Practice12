@@ -1,0 +1,242 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: '2020-01-22T14:37:04Z'
+  generation: 2
+  labels:
+    app: wordpress
+  name: wordpress
+  namespace: wordpress
+  resourceVersion: '13470386'
+  selfLink: /apis/apps.openshift.io/v1/namespaces/wordpress/deploymentconfigs/wordpress
+  uid: a8788f3d-3d24-11ea-82e7-000d3aac488d
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    app: wordpress
+    deploymentconfig: wordpress
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        app: wordpress
+        deploymentconfig: wordpress
+    spec:
+      containers:
+        - image: >-
+            docker-registry.default.svc:5000/wordpress/wordpress@sha256:00c31ebf9732c3bca084fa8dda623daf7045bb024eff74eaa1a232e788311ecb
+          imagePullPolicy: Always
+          name: wordpress
+          ports:
+            - containerPort: 8443
+              protocol: TCP
+            - containerPort: 8080
+              protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - wordpress
+        from:
+          kind: ImageStreamTag
+          name: 'wordpress:latest'
+          namespace: wordpress
+        lastTriggeredImage: >-
+          docker-registry.default.svc:5000/wordpress/wordpress@sha256:00c31ebf9732c3bca084fa8dda623daf7045bb024eff74eaa1a232e788311ecb
+      type: ImageChange
+status:
+  availableReplicas: 1
+  conditions:
+    - lastTransitionTime: '2020-01-22T14:37:57Z'
+      lastUpdateTime: '2020-01-22T14:37:57Z'
+      message: Deployment config has minimum availability.
+      status: 'True'
+      type: Available
+    - lastTransitionTime: '2020-01-22T14:37:57Z'
+      lastUpdateTime: '2020-01-22T14:37:57Z'
+      message: replication controller "wordpress-1" successfully rolled out
+      reason: NewReplicationControllerAvailable
+      status: 'True'
+      type: Progressing
+  details:
+    causes:
+      - type: ConfigChange
+    message: config change
+  latestVersion: 1
+  observedGeneration: 2
+  readyReplicas: 1
+  replicas: 1
+  unavailableReplicas: 0
+  updatedReplicas: 1
+  #############################################################################
+  # MySQL DeploymentConfig
+  #############################################################################
+  apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+    template.alpha.openshift.io/wait-for-ready: 'true'
+  creationTimestamp: '2020-01-22T14:37:18Z'
+  generation: 2
+  labels:
+    app: mysql-ephemeral
+    template: mysql-ephemeral-template
+  name: mysql
+  namespace: wordpress
+  resourceVersion: '13470401'
+  selfLink: /apis/apps.openshift.io/v1/namespaces/wordpress/deploymentconfigs/mysql
+  uid: b10e164d-3d24-11ea-82e7-000d3aac488d
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    name: mysql
+  strategy:
+    activeDeadlineSeconds: 21600
+    recreateParams:
+      timeoutSeconds: 600
+    resources: {}
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        app: mysql-ephemeral
+        name: mysql
+    spec:
+      containers:
+        - env:
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: database-user
+                  name: mysql
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: database-password
+                  name: mysql
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: database-root-password
+                  name: mysql
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: database-name
+                  name: mysql
+          image: >-
+            docker-registry.default.svc:5000/openshift/mysql@sha256:e08ee4d43b7356607685b69bde6335e27cf20c020f345b6c6c59400183882764
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 3306
+            timeoutSeconds: 1
+          name: mysql
+          ports:
+            - containerPort: 3306
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - '-i'
+                - '-c'
+                - >-
+                  MYSQL_PWD="$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u $MYSQL_USER
+                  -D $MYSQL_DATABASE -e 'SELECT 1'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 512Mi
+          securityContext:
+            capabilities: {}
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/mysql/data
+              name: mysql-data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: mysql-data
+  test: false
+  triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+          - mysql
+        from:
+          kind: ImageStreamTag
+          name: 'mysql:5.7'
+          namespace: openshift
+        lastTriggeredImage: >-
+          docker-registry.default.svc:5000/openshift/mysql@sha256:e08ee4d43b7356607685b69bde6335e27cf20c020f345b6c6c59400183882764
+      type: ImageChange
+    - type: ConfigChange
+status:
+  availableReplicas: 1
+  conditions:
+    - lastTransitionTime: '2020-01-22T14:37:58Z'
+      lastUpdateTime: '2020-01-22T14:37:58Z'
+      message: Deployment config has minimum availability.
+      status: 'True'
+      type: Available
+    - lastTransitionTime: '2020-01-22T14:37:58Z'
+      lastUpdateTime: '2020-01-22T14:37:58Z'
+      message: replication controller "mysql-1" successfully rolled out
+      reason: NewReplicationControllerAvailable
+      status: 'True'
+      type: Progressing
+  details:
+    causes:
+      - type: ConfigChange
+    message: config change
+  latestVersion: 1
+  observedGeneration: 2
+  readyReplicas: 1
+  replicas: 1
+  unavailableReplicas: 0
+  updatedReplicas: 1
